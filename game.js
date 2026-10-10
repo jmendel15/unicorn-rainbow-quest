@@ -7,6 +7,7 @@
 
   const RAINBOW = ['#ff5c8a', '#ff9f43', '#ffd23f', '#5ed17a', '#45c4f5', '#7b8cff', '#c77dff'];
   const NUMBERS = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'];
+  const KID = 'Kaia';
 
   // ---------------------------------------------------------------------------
   // STAGES — add new stages here. `type` picks the gameplay; every stage has
@@ -25,7 +26,20 @@
       goalSay: 'Help the unicorn collect ten rainbow stars! Touch where you want the unicorn to go.',
       winSay: 'Hooray! You found all the rainbow stars! You made a rainbow!',
     },
-    { id: 2, name: 'Fairy Forest', icon: '🧚', comingSoon: true },
+    {
+      id: 2,
+      name: 'Fairy Forest',
+      icon: '🧚',
+      type: 'bubbles',
+      theme: 'forest',
+      slot: 'heart',
+      target: 8,
+      onScreen: 3,
+      goalIcon: '🧚<span class="x">×</span>8',
+      goalText: 'Pop the bubbles to free the fairies!',
+      goalSay: 'Oh no! The fairies are stuck in bubbles! Tap the bubbles to pop them and set the fairies free!',
+      winSay: `Thank you, ${KID}! You freed all the fairies! Hooray!`,
+    },
     { id: 3, name: 'Cloud Castle', icon: '🏰', comingSoon: true },
   ];
 
@@ -76,6 +90,19 @@
     [523.25, 659.25, 783.99, 1046.5, 1318.51].forEach((f, i) => tone(f, t + i * 0.12, 0.5, 'triangle', 0.18));
     [523.25, 659.25, 783.99, 1046.5].forEach((f) => tone(f, t + 0.7, 1.4, 'sine', 0.12));
   }
+  function popSound() {
+    if (muted || !actx) return;
+    const t = actx.currentTime;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(900, t);
+    o.frequency.exponentialRampToValueAtTime(220, t + 0.09);
+    g.gain.setValueAtTime(0.35, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g).connect(actx.destination);
+    o.start(t);
+    o.stop(t + 0.15);
+  }
   function blip() {
     if (muted || !audio()) return;
     tone(880, actx.currentTime, 0.12, 'sine', 0.15);
@@ -88,13 +115,13 @@
     voice = en.find((v) => /Samantha|Karen|Moira|Tessa|Google US English|Female/i.test(v.name)) || en[0] || null;
   }
   if (canSpeak) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-  function say(text) {
+  function say(text, { pitch = 1.25, rate = 0.95 } = {}) {
     if (muted || !canSpeak) return;
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     if (voice) u.voice = voice;
-    u.rate = 0.95;
-    u.pitch = 1.25;
+    u.rate = rate;
+    u.pitch = pitch;
     speechSynthesis.speak(u);
   }
 
@@ -102,6 +129,7 @@
   // Sizing + painted background
   // ---------------------------------------------------------------------------
   let W = 0, H = 0, S = 1, DPR = 1;
+  let theme = 'meadow';
   const bg = document.createElement('canvas');
   const bgx = bg.getContext('2d');
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -128,6 +156,12 @@
     uni.tx = clamp(uni.tx || uni.x, b.x0, b.x1);
     uni.ty = clamp(uni.ty || uni.y, b.y0, b.y1);
     stars.forEach((st) => { st.x = clamp(st.x, b.x0, b.x1); st.y = clamp(st.y, b.y0, b.y1); });
+    bubbles.forEach((bb) => { bb.bx = clamp(bb.bx, bb.r + 10, W - bb.r - 10); });
+  }
+  function setTheme(t) {
+    if (theme === t) return;
+    theme = t;
+    paintBackground();
   }
 
   function seeded(s) { return () => (s = (s * 16807) % 2147483647) / 2147483647; }
@@ -135,6 +169,7 @@
   function paintBackground() {
     const c = bgx;
     c.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (theme === 'forest') { paintForest(c); return; }
     const g = c.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, '#aee3ff');
     g.addColorStop(0.55, '#e6dcff');
@@ -163,6 +198,60 @@
     for (let i = 0; i < n; i++) {
       flower(c, rnd() * W, H * 0.88 + rnd() * H * 0.11, (4 + rnd() * 3) * S, RAINBOW[Math.floor(rnd() * 7)]);
     }
+  }
+  function paintForest(c) {
+    const g = c.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#c7b6ff');
+    g.addColorStop(0.5, '#f3d4f5');
+    g.addColorStop(1, '#ffe6f0');
+    c.fillStyle = g;
+    c.fillRect(0, 0, W, H);
+
+    // big glowing moon
+    const mx = W * 0.8, my = H * 0.2, mr = 46 * S;
+    const glow = c.createRadialGradient(mx, my, mr * 0.5, mx, my, mr * 3);
+    glow.addColorStop(0, 'rgba(255,250,220,0.8)');
+    glow.addColorStop(1, 'rgba(255,250,220,0)');
+    c.fillStyle = glow;
+    c.fillRect(mx - mr * 3, my - mr * 3, mr * 6, mr * 6);
+    c.fillStyle = '#fff8dc';
+    c.beginPath(); c.arc(mx, my, mr, 0, 7); c.fill();
+
+    const rnd = seeded(11);
+    // two layers of soft trees: far (pale) then near (stronger)
+    [[0.62, '#b9a6ec', '#a08ad8', 0.8], [0.72, '#8fd1b0', '#7a5fa8', 1.1]].forEach(([base, leaf, trunk, sc]) => {
+      const n = Math.max(4, Math.round(W / (140 * S * sc)));
+      for (let i = 0; i <= n; i++) {
+        const x = (i / n) * W + (rnd() - 0.5) * 60 * S;
+        const h = (140 + rnd() * 90) * S * sc;
+        const y = H * base + rnd() * 20 * S;
+        c.fillStyle = trunk;
+        c.beginPath();
+        c.roundRect(x - 9 * S * sc, y - h * 0.45, 18 * S * sc, h * 0.45 + H, 6 * S);
+        c.fill();
+        c.fillStyle = leaf;
+        [[0, -h * 0.62, 0.34], [-h * 0.2, -h * 0.45, 0.26], [h * 0.2, -h * 0.47, 0.27], [0, -h * 0.85, 0.24]].forEach(([dx, dy, r]) => {
+          c.beginPath(); c.arc(x + dx, y + dy, h * r, 0, 7); c.fill();
+        });
+      }
+    });
+
+    hill(c, H * 0.84, 22, 0.006, '#a6e8b4', 2);
+    hill(c, H * 0.92, 16, 0.009, '#8ddc9f', 3);
+
+    // mushrooms and flowers on the ground
+    const m = Math.round(W / 120);
+    for (let i = 0; i < m; i++) mushroom(c, rnd() * W, H * 0.9 + rnd() * H * 0.07, (0.7 + rnd() * 0.6) * S);
+    const n = Math.round(W / 45);
+    for (let i = 0; i < n; i++) flower(c, rnd() * W, H * 0.9 + rnd() * H * 0.09, (3.5 + rnd() * 2.5) * S, RAINBOW[Math.floor(rnd() * 7)]);
+  }
+  function mushroom(c, x, y, s) {
+    c.fillStyle = '#fff4e6';
+    c.beginPath(); c.roundRect(x - 6 * s, y - 16 * s, 12 * s, 18 * s, 4 * s); c.fill();
+    c.fillStyle = '#ff6f91';
+    c.beginPath(); c.ellipse(x, y - 16 * s, 20 * s, 14 * s, 0, Math.PI, 0); c.fill();
+    c.fillStyle = '#fff';
+    [[-9, -21, 3], [4, -25, 3.5], [11, -18, 2.5]].forEach(([dx, dy, r]) => { c.beginPath(); c.arc(x + dx * s, y + dy * s, r * s, 0, 7); c.fill(); });
   }
   function hill(c, base, amp, freq, col, seed) {
     c.fillStyle = col;
@@ -194,6 +283,8 @@
   // ---------------------------------------------------------------------------
   const uni = { x: 0, y: 0, tx: 0, ty: 0, facing: 1, moving: false, t: 0 };
   let stars = [];
+  let bubbles = [];             // Stage 2: bubbles with a fairy inside
+  let freed = [];               // Stage 2: fairies flying away after a pop
   let particles = [];
   const clouds = [];
   let now = 0;
@@ -220,7 +311,11 @@
     uni.ty = clamp(e.clientY + 15 * S, b.y0, b.y1);
     lastPointer = now;
   }
-  canvas.addEventListener('pointerdown', (e) => { audio(); aim(e); });
+  canvas.addEventListener('pointerdown', (e) => {
+    audio();
+    if (state === 'play' && stage.type === 'bubbles' && tapBubble(e.clientX, e.clientY)) return;
+    aim(e);
+  });
   canvas.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' || e.buttons) aim(e); });
 
   // ---------------------------------------------------------------------------
@@ -233,13 +328,14 @@
   }
 
   const STAR_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3 6.1 20.6l1.3-6.6L2.5 9.4l6.6-.8z"/></svg>';
-  function buildSlots(n) {
+  const HEART_SVG = '<svg viewBox="0 0 24 24"><path d="M12 20.5s-8-4.9-8-10.6C4 7 6 5 8.4 5c1.6 0 2.9.9 3.6 2.1C12.7 5.9 14 5 15.6 5 18 5 20 7 20 9.9c0 5.7-8 10.6-8 10.6z"/></svg>';
+  function buildSlots(n, kind) {
     const box = $('slots');
     box.innerHTML = '';
     for (let i = 0; i < n; i++) {
       const d = document.createElement('div');
       d.className = 'slot';
-      d.innerHTML = STAR_SVG;
+      d.innerHTML = kind === 'heart' ? HEART_SVG : STAR_SVG;
       box.appendChild(d);
     }
   }
@@ -281,7 +377,10 @@
     clearTimeout(winTimer);
     state = 'map';
     stars = [];
+    bubbles = [];
+    freed = [];
     rainbowP = 0;
+    setTheme('meadow');
     buildMap();
     show('map');
     say('Pick a stage!');
@@ -295,8 +394,11 @@
     collected = 0;
     spawned = 0;
     stars = [];
+    bubbles = [];
+    freed = [];
     rainbowP = 0;
-    buildSlots(stage.target);
+    setTheme(stage.theme || 'meadow');
+    buildSlots(stage.target, stage.slot);
     $('goalIcon').innerHTML = stage.goalIcon;
     $('goalText').textContent = stage.goalText;
     show('goal');
@@ -354,6 +456,88 @@
   }
 
   // ---------------------------------------------------------------------------
+  // Bubbles + fairies (Stage 2)
+  // ---------------------------------------------------------------------------
+  const SKIN = ['#ffe0c7', '#f5c9a0', '#d9a077', '#a86d4a', '#7a4a2e'];
+  const HAIR = ['#ffd23f', '#ff8fb8', '#8b5a2b', '#3d2257', '#ff9f43', '#c77dff'];
+  function randomFairy(i) {
+    return {
+      skin: SKIN[Math.floor(Math.random() * SKIN.length)],
+      hair: HAIR[Math.floor(Math.random() * HAIR.length)],
+      dress: RAINBOW[i % RAINBOW.length],
+      wing: ['#bfe9ff', '#ffd1ec', '#e3d4ff', '#d4ffe7'][i % 4],
+    };
+  }
+
+  function spawnBubble() {
+    const r = 52 * S;
+    let bx = 0;
+    for (let k = 0; k < 20; k++) {
+      bx = r + 10 + Math.random() * (W - 2 * r - 20);
+      if (bubbles.every((b) => Math.abs(b.bx - bx) > r * 2.2)) break;
+    }
+    bubbles.push({
+      bx, x: bx, y: H + r + Math.random() * 120 * S, r,
+      vy: (38 + Math.random() * 22) * S,
+      phase: Math.random() * 6,
+      fairy: randomFairy(spawned),
+    });
+    spawned++;
+  }
+
+  // Returns true if the tap popped a bubble. Generous hit area for small fingers.
+  function tapBubble(px, py) {
+    let hit = null, best = Infinity;
+    for (const b of bubbles) {
+      const d = Math.hypot(px - b.x, py - b.y);
+      if (d < b.r * 1.3 && d < best) { hit = b; best = d; }
+    }
+    if (!hit) return false;
+    popBubble(hit);
+    return true;
+  }
+
+  function popBubble(b) {
+    bubbles = bubbles.filter((o) => o !== b);
+    collected++;
+    lastCollect = now;
+    popSound();
+    chime(collected - 1);
+    burst(b.x, b.y, '#9fdcff');
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      particles.push({ kind: 'drop', x: b.x + Math.cos(a) * b.r, y: b.y + Math.sin(a) * b.r, vx: Math.cos(a) * 140 * S, vy: Math.sin(a) * 140 * S, life: 0, max: 0.45, size: 5 * S, color: 'rgba(200,235,255,0.9)' });
+    }
+    freed.push({ x: b.x, y: b.y, born: now, dir: b.x < W / 2 ? 1 : -1, look: b.fairy });
+    fillSlot(collected - 1, b.fairy.dress);
+    if (collected >= stage.target) win();
+    else say(`Thank you, ${KID}!`, { pitch: 1.8, rate: 1.05 });
+  }
+
+  function updateBubbles(dt) {
+    if (bubbles.length < stage.onScreen && collected + bubbles.length < stage.target) spawnBubble();
+    const top = hudBottom();
+    for (const b of bubbles) {
+      b.y -= b.vy * dt;
+      b.x = b.bx + Math.sin(now * 1.3 + b.phase) * 22 * S;
+      // floated away? send it back to the bottom so nothing is ever lost
+      if (b.y < top - b.r * 1.2) { b.y = H + b.r; b.bx = b.r + 10 + Math.random() * (W - 2 * b.r - 20); }
+    }
+  }
+
+  function updateFreed(dt) {
+    for (const f of freed) {
+      const age = now - f.born;
+      f.x += f.dir * (40 + age * 50) * S * dt + Math.cos(age * 5) * 60 * S * dt;
+      f.y -= (30 + age * 70) * S * dt;
+      if (Math.random() < dt * 25) {
+        particles.push({ kind: 'spark', x: f.x, y: f.y + 10 * S, vx: 0, vy: 20 * S, life: 0, max: 0.6, size: (2.5 + Math.random() * 3) * S, color: RAINBOW[Math.floor(Math.random() * 7)] });
+      }
+    }
+    freed = freed.filter((f) => now - f.born < 4 && f.y > -60);
+  }
+
+  // ---------------------------------------------------------------------------
   // Particles
   // ---------------------------------------------------------------------------
   function burst(x, y, color) {
@@ -402,8 +586,18 @@
     uni.t += dt;
     if (uni.moving && Math.random() < dt * 30) trail();
 
-    // Stars
-    if (state === 'play') {
+    // Bubbles (Stage 2)
+    if (state === 'play' && stage.type === 'bubbles') {
+      updateBubbles(dt);
+      if (now - lastCollect > 7 && now - lastHint > 12) {
+        lastHint = now;
+        say('Pop a bubble! Tap it!');
+      }
+    }
+    updateFreed(dt);
+
+    // Stars (Stage 1)
+    if (state === 'play' && stage.type === 'collect') {
       if (stars.length < stage.onScreen && spawned < stage.target) spawnStar();
       const hx = uni.x + uni.facing * 12 * S, hy = uni.y - 18 * S, reach = 62 * S;
       for (const st of stars) {
@@ -428,6 +622,7 @@
     for (const p of particles) {
       p.life += dt;
       if (p.kind === 'spark') { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.94; p.vy = p.vy * 0.94 + 60 * S * dt; }
+      if (p.kind === 'drop') { p.x += p.vx * dt; p.y += p.vy * dt; }
       if (p.kind === 'confetti') { p.x += p.vx * dt + Math.sin(p.life * 3 + p.rot) * 30 * dt; p.y += p.vy * dt; p.rot += p.vr * dt; }
     }
     particles = particles.filter((p) => p.life < p.max && p.y < H + 40);
@@ -504,11 +699,155 @@
     ctx.restore();
   }
 
+  // A fairy about 44px tall at s = 1, centered on (x, y).
+  function drawFairy(x, y, s, look, t, happy) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // wings (flutter fast when free, slowly when trapped)
+    const flap = happy ? 0.55 + 0.45 * Math.abs(Math.sin(t * 22)) : 0.8 + 0.2 * Math.sin(t * 4);
+    ctx.fillStyle = look.wing;
+    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.85;
+    [[-1, -8, 13, 9, -0.5], [-1, 3, 9, 6, 0.4]].forEach(([, wy, rx, ry, rot]) => {
+      [-1, 1].forEach((side) => {
+        ctx.save();
+        ctx.scale(side * flap, 1);
+        ctx.beginPath();
+        ctx.ellipse(rx * 0.9, wy, rx, ry, rot, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      });
+    });
+    ctx.globalAlpha = 1;
+
+    // legs + arms
+    ctx.strokeStyle = look.skin;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.moveTo(-3, 12); ctx.lineTo(-4, 20); ctx.moveTo(3, 12); ctx.lineTo(4, 20); ctx.stroke();
+    const wave = happy ? Math.sin(t * 10) * 4 : 0;
+    ctx.beginPath(); ctx.moveTo(-4, -2); ctx.lineTo(-11, happy ? -9 + wave : 6); ctx.moveTo(4, -2); ctx.lineTo(11, happy ? -12 : 6); ctx.stroke();
+
+    // wand with a star
+    if (happy) {
+      ctx.strokeStyle = '#fff3b0';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath(); ctx.moveTo(11, -12); ctx.lineTo(15, -20); ctx.stroke();
+      ctx.fillStyle = '#ffd23f';
+      starPath(15.5, -21.5, 4.5, t * 3);
+      ctx.fill();
+    }
+
+    // dress
+    ctx.fillStyle = look.dress;
+    ctx.beginPath();
+    ctx.moveTo(-4, -4); ctx.lineTo(4, -4); ctx.lineTo(10, 13); ctx.quadraticCurveTo(0, 16, -10, 13);
+    ctx.closePath();
+    ctx.fill();
+
+    // hair (back), head, hair (bangs + bun)
+    ctx.fillStyle = look.hair;
+    ctx.beginPath(); ctx.arc(0, -11, 8.5, 0, 7); ctx.fill();
+    ctx.fillStyle = look.skin;
+    ctx.beginPath(); ctx.arc(0, -10, 7, 0, 7); ctx.fill();
+    ctx.fillStyle = look.hair;
+    ctx.beginPath(); ctx.arc(0, -12, 7.2, Math.PI * 1.05, Math.PI * 1.95); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, -20, 3.8, 0, 7); ctx.fill();
+
+    // face
+    ctx.fillStyle = '#3d2257';
+    ctx.beginPath(); ctx.arc(-2.6, -9.5, 1.1, 0, 7); ctx.arc(2.6, -9.5, 1.1, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#c25a86';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    if (happy) ctx.arc(0, -7.5, 2.4, 0.15 * Math.PI, 0.85 * Math.PI);
+    else ctx.arc(0, -5.5, 1.2, 0, 7);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,140,190,0.5)';
+    ctx.beginPath(); ctx.arc(-4.5, -7.5, 1.6, 0, 7); ctx.arc(4.5, -7.5, 1.6, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBubble(b) {
+    // fairy inside, gently bobbing
+    drawFairy(b.x, b.y + Math.sin(now * 2 + b.phase) * 4 * S, b.r / 34, b.fairy, now + b.phase, false);
+
+    ctx.save();
+    const g = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.1, b.x, b.y, b.r);
+    g.addColorStop(0, 'rgba(255,255,255,0.05)');
+    g.addColorStop(0.75, 'rgba(210,235,255,0.18)');
+    g.addColorStop(1, 'rgba(190,220,255,0.45)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill();
+    // shimmering rainbow rim
+    ctx.lineWidth = 3 * S;
+    ctx.strokeStyle = `hsla(${(now * 60 + b.phase * 60) % 360}, 90%, 75%, 0.9)`;
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.stroke();
+    ctx.lineWidth = 1.5 * S;
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r - 2.5 * S, 0, 7); ctx.stroke();
+    // shine
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.ellipse(b.x - b.r * 0.42, b.y - b.r * 0.45, b.r * 0.2, b.r * 0.1, -0.7, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.x - b.r * 0.15, b.y - b.r * 0.62, b.r * 0.05, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawFreed(f) {
+    const age = now - f.born;
+    const fade = Math.min(1, (4 - age) / 0.8);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, fade);
+    drawFairy(f.x, f.y, 1.45 * S, f.look, now * 1.3 + f.born, true);
+    // "Thank you, Kaia!" speech bubble for the first 2.2 seconds
+    if (age < 2.2) {
+      const text = `Thank you, ${KID}!`;
+      const fs = Math.round(clamp(20 * S, 16, 26));
+      ctx.font = `800 ${fs}px "Baloo 2", system-ui, sans-serif`;
+      const tw = ctx.measureText(text).width, pw = tw + fs * 1.2, ph = fs * 1.7;
+      const pop = easeOutBack(Math.min(1, age / 0.35));
+      const tx = clamp(f.x, pw / 2 + 8, W - pw / 2 - 8);
+      const ty = Math.max(f.y - 58 * S, hudBottom() + ph / 2 + 8);   // never hide it under the HUD
+      ctx.translate(tx, ty);
+      ctx.scale(pop, pop);
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = f.look.dress;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(-pw / 2, -ph / 2, pw, ph, ph / 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#5b3a8c';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, 0, fs * 0.08);
+    }
+    ctx.restore();
+  }
+
+  function drawFireflies() {
+    for (let i = 0; i < 14; i++) {
+      const x = ((i * 137.5) % 100) / 100 * W + Math.sin(now * 0.4 + i) * 40 * S;
+      const y = H * (0.25 + ((i * 61.8) % 55) / 100) + Math.cos(now * 0.5 + i * 2) * 25 * S;
+      const a = 0.35 + 0.35 * Math.sin(now * 2 + i * 1.7);
+      ctx.fillStyle = `rgba(255,245,170,${a})`;
+      ctx.beginPath(); ctx.arc(x, y, 7 * S, 0, 7); ctx.fill();
+      ctx.fillStyle = `rgba(255,255,230,${a + 0.3})`;
+      ctx.beginPath(); ctx.arc(x, y, 2.5 * S, 0, 7); ctx.fill();
+    }
+  }
+
   function drawHintArrow() {
-    if (state !== 'play' || now - lastCollect < 6 || !stars.length) return;
-    let near = stars[0];
-    for (const s of stars) if (Math.hypot(s.x - uni.x, s.y - uni.y) < Math.hypot(near.x - uni.x, near.y - uni.y)) near = s;
-    const y = near.y - 62 * S - Math.abs(Math.sin(now * 5)) * 16 * S;
+    const targets = stage && stage.type === 'bubbles' ? bubbles : stars;
+    if (state !== 'play' || now - lastCollect < 6 || !targets.length) return;
+    let near = targets[0];
+    for (const s of targets) if (Math.hypot(s.x - uni.x, s.y - uni.y) < Math.hypot(near.x - uni.x, near.y - uni.y)) near = s;
+    const y = near.y - (near.r ? near.r + 30 * S : 62 * S) - Math.abs(Math.sin(now * 5)) * 16 * S;
     ctx.save();
     ctx.fillStyle = '#ff5c8a';
     ctx.strokeStyle = '#fff';
@@ -704,6 +1043,10 @@
       if (p.kind === 'spark') {
         starPath(p.x, p.y, p.size * (0.4 + k * 0.6), p.life * 4);
         ctx.fill();
+      } else if (p.kind === 'drop') {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * k, 0, 7);
+        ctx.fill();
       } else if (p.kind === 'ring') {
         ctx.strokeStyle = p.color;
         ctx.lineWidth = 6 * S * k;
@@ -739,11 +1082,14 @@
   function render() {
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.drawImage(bg, 0, 0, W, H);
-    clouds.forEach(drawCloud);
+    if (theme === 'forest') drawFireflies();
+    else clouds.forEach(drawCloud);
     if (rainbowP > 0) drawBigRainbow(rainbowP);
     stars.forEach(drawStar);
     drawParticles();
     drawUnicorn();
+    bubbles.forEach(drawBubble);
+    freed.forEach(drawFreed);
     drawHintArrow();
   }
 

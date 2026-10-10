@@ -11,7 +11,7 @@ A gentle touch game for a 5-year-old, with unicorns, rainbows, and fairies. It p
 | # | Name | Goal | Status |
 |---|------|------|--------|
 | 1 | Star Meadow ⭐ | Collect 10 rainbow stars | ✅ Playable |
-| 2 | Fairy Forest 🧚 | _TBD_ | 🔒 Coming soon |
+| 2 | Fairy Forest 🧚 | Pop 8 bubbles to free the fairies | ✅ Playable |
 | 3 | Cloud Castle 🏰 | _TBD_ | 🔒 Coming soon |
 
 ## Code
