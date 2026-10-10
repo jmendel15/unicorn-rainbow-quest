@@ -1,5 +1,7 @@
 # 🦄 Unicorn Rainbow Quest
 
+**▶ Play: https://jmendel15.github.io/unicorn-rainbow-quest/**
+
 A gentle touch game for a 5-year-old, with unicorns, rainbows, and fairies. It plays in any browser (phone, tablet, or laptop) with no install. On a phone, choose **Share → Add to Home Screen** to open it full screen.
 
 ## How to play
