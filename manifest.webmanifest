@@ -1,0 +1,10 @@
+{
+  "name": "Unicorn Rainbow Quest",
+  "short_name": "Unicorn Quest",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#ffe3f3",
+  "theme_color": "#ffd6ef",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
