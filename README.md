@@ -12,7 +12,8 @@ A gentle touch game for a 5-year-old, with unicorns, rainbows, and fairies. It p
 |---|------|------|--------|
 | 1 | Star Meadow ⭐ | Collect 10 rainbow stars | ✅ Playable |
 | 2 | Fairy Forest 🧚 | Pop 8 bubbles to free the fairies | ✅ Playable |
-| 3 | Cloud Castle 🏰 | _TBD_ | 🔒 Coming soon |
+| 3 | Ice Cream Sky 🍦 | Play as a fairy: fly into 6 bubbles, free the ice creams, eat them | ✅ Playable |
+| 🏆 | Trophy Room | Find 1 unicorn toy, 1 fairy toy, and 3 shells to break the shield and win the trophy (end of game) | ✅ Unlocks after stage 3 |
 
 ## Code
 Plain HTML, CSS, and JS with no build step. It's hosted on GitHub Pages.

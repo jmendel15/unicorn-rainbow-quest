@@ -192,3 +192,26 @@ h1 {
   .round { width: 46px; height: 46px; font-size: 22px; }
   #slots { gap: 1px; padding: 5px 6px; }
 }
+
+/* Trophy room: emoji item slots that light up when found */
+.slot.emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(18px, 6vw, 30px);
+  line-height: 1;
+  filter: grayscale(1);
+  opacity: 0.35;
+  transition: opacity 0.2s, filter 0.2s;
+}
+.slot.emoji.on { filter: none; opacity: 1; animation: slotPop 0.5s ease-out; }
+.goal-items { font-size: 0.6em; letter-spacing: 2px; }
+.win-title.long { font-size: clamp(34px, 9vw, 72px); max-width: 80vw; }
+.stage.final { border-color: #ffd23f; box-shadow: 0 8px 0 #e0a526, 0 14px 24px rgba(90, 40, 140, 0.25); background: linear-gradient(145deg, #fffbe6, #ffefb0); }
+.stage.final.locked { border-color: #cfc3e3; background: #eee8f5; box-shadow: 0 8px 0 #b7a9cf; }
+.shell-ico svg { width: 1em; height: 1em; vertical-align: -0.12em; }
+.slot.emoji svg { width: 85%; height: 85%; }
+#win.at-bottom { justify-content: flex-end; background: transparent; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+#win.at-bottom .card { padding: 14px 24px 18px; }
+#win.at-bottom .win-title { margin-bottom: 10px; }
+#win.at-bottom .big { width: clamp(80px, 20vw, 110px); height: clamp(80px, 20vw, 110px); font-size: clamp(36px, 9vw, 50px); }
